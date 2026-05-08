@@ -36,21 +36,22 @@ def number_to_korean(num):
         result.append(f"{천:,}천")
     return " ".join(result)
 
-# 🎨 [긴급수정] 폰트 색상 함수 (보류 제외 로직 강화)
+# 🎨 [긴급교정] 보류 빨간색 방지 스타일 함수
 def font_style(row):
-    # '상담결과' 컬럼의 값을 정확히 가져옴
-    status = str(row['상담결과']).strip()
+    # '상담결과' 컬럼의 값을 가져옴 (한글 컬럼명 기준)
+    status = str(row.get('상담결과', '')).strip()
     
-    # 기본 스타일: 색상 지정 없음
-    style = 'color: inherit;'
-    
+    # 1. 확정 -> 노란색
     if status == '확정':
-        style = 'color: #E6B400;' # 노란색
+        color = 'color: #E6B400;'
+    # 2. 미확정 -> 빨간색 (보류는 여기서 제외됨)
     elif status == '미확정':
-        style = 'color: #D32F2F;' # 빨간색
-    
-    # '보류'나 다른 값들은 위 조건에 걸리지 않으므로 'inherit'이 적용됨
-    return [style] * len(row)
+        color = 'color: #D32F2F;'
+    # 3. 보류, 상담없음 등 그 외 모든 경우 -> 기본 색상
+    else:
+        color = 'color: inherit;'
+        
+    return [color] * len(row)
 
 st.title("🏥 상담 내역 관리 및 조회 시스템")
 
@@ -106,40 +107,40 @@ with tab2:
             df = pd.DataFrame(res.data)
             
             if not df.empty:
-                # 1. 데이터 형식 변환
+                # 데이터 전처리
                 df['created_at'] = pd.to_datetime(df['created_at']).dt.date
                 for col in ['price_suggested', 'price_confirmed', 'price_paid']:
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
                 
-                # 2. 합계 계산
+                # 합계 계산
                 s_sum, c_sum, p_sum = df['price_suggested'].sum(), df['price_confirmed'].sum(), df['price_paid'].sum()
 
-                # 3. [순서] 구분 다음 상담항목 배치
-                df_ordered = df[[
+                # [요청 1] 순서 재배치: 상담항목을 구분 다음으로
+                df_view = df[[
                     'created_at', 'branch', 'patient_name', 'patient_type', 'treatment',
                     'inflow', 'staff_name', 'result', 'price_suggested', 'price_confirmed',
                     'price_paid', 'content'
                 ]]
 
-                # 4. 한글 컬럼명 설정
-                df_ordered.columns = [
+                # [요청 2] 한글 컬럼명
+                df_view.columns = [
                     '일자', '지점', '환자명', '구분', '상담항목',
                     '내원경로', '상담자', '상담결과', '상담금액', '확정금액',
                     '수납금액', '상담내용'
                 ]
 
-                # 5. 금액 콤마 표시 (에러 방지를 위해 최종 출력용 복사본 생성)
-                final_display = df_ordered.copy()
+                # 금액 포맷팅 (콤마 추가)
+                display_df = df_view.copy()
                 for c in ['상담금액', '확정금액', '수납금액']:
-                    final_display[c] = final_display[c].apply(lambda x: f"{int(x):,}원")
+                    display_df[c] = display_df[c].apply(lambda x: f"{x:,}원")
                 
-                # 6. 스타일 적용 (확정: 노랑, 미확정: 빨강만!)
-                styled_df = final_display.style.apply(font_style, axis=1)
+                # [핵심] 스타일 적용 (확정 노랑, 미확정 빨강만!)
+                styled_df = display_df.style.apply(font_style, axis=1)
                 st.dataframe(styled_df, use_container_width=True)
                 
                 st.divider()
                 
-                # 7. [순서] 합계: 상담 -> 확정 -> 수납
+                # [요청 3] 합계 순서: 상담 -> 확정 -> 수납
                 m1, m2, m3 = st.columns(3)
                 m1.metric("총 상담 금액 합계", f"{s_sum:,}원")
                 m2.metric("총 확정 금액 합계", f"{c_sum:,}원")
@@ -147,4 +148,4 @@ with tab2:
             else:
                 st.warning("데이터가 없습니다.")
         except Exception as e:
-            st.error(f"조회 중 오류 발생: {str(e)}")
+            st.error(f"조회 실패: {str(e)}")
