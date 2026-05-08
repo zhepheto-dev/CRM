@@ -112,4 +112,37 @@ with tab2:
                 # 2. 합계 계산
                 s_sum, c_sum, p_sum = df['price_suggested'].sum(), df['price_confirmed'].sum(), df['price_paid'].sum()
 
-                # 3. 순서 재배치 (상담
+                # 3. 순서 재배치 (상담항목을 구분 다음으로)
+                df_ordered = df[[
+                    'created_at', 'branch', 'patient_name', 'patient_type', 'treatment',
+                    'inflow', 'staff_name', 'result', 'price_suggested', 'price_confirmed', 
+                    'price_paid', 'content'
+                ]]
+
+                # 4. 한글 컬럼명
+                df_ordered.columns = [
+                    '일자', '지점', '환자명', '구분', '상담항목',
+                    '내원경로', '상담자', '상담결과', '상담금액', '확정금액', 
+                    '수납금액', '상담내용'
+                ]
+
+                # 5. 금액 문자열 포맷팅 (콤마 에러 방지용)
+                display_df = df_ordered.copy()
+                for col in ['상담금액', '확정금액', '수납금액']:
+                    display_df[col] = display_df[col].apply(lambda x: f"{x:,}원")
+                
+                # 6. 스타일 적용 (확정/미확정 색상)
+                styled_df = display_df.style.apply(font_style, axis=1)
+                st.dataframe(styled_df, use_container_width=True)
+                
+                st.divider()
+                
+                # 7. 합산 결과 (상담 -> 확정 -> 수납 순서)
+                c1, c2, c3 = st.columns(3)
+                c1.metric("총 상담 금액 합계", f"{s_sum:,}원")
+                c2.metric("총 확정 금액 합계", f"{c_sum:,}원")
+                c3.metric("총 수납 금액 합계", f"{p_sum:,}원")
+            else:
+                st.warning("데이터가 없습니다.")
+        except Exception as e:
+            st.error(f"오류 발생: {str(e)}")
