@@ -36,6 +36,15 @@ def number_to_korean(num):
         result.append(f"{천:,}천")
     return " ".join(result)
 
+# 🎨 행 색상 지정 함수
+def row_style(row):
+    color = ""
+    if row['상담결과'] == '확정':
+        color = 'background-color: #FFF9C4; color: black;' # 연한 노란색
+    elif row['상담결과'] == '미확정':
+        color = 'background-color: #FFCDD2; color: black;' # 연한 빨간색
+    return [color] * len(row)
+
 st.title("🏥 상담 내역 관리 및 조회 시스템")
 
 tab1, tab2 = st.tabs(["📝 상담 내역 입력", "📊 저장 데이터 조회"])
@@ -86,7 +95,7 @@ with tab1:
                 except Exception as e:
                     st.error(f"저장 실패: {e}")
 
-# --- 탭 2: 조회부 (날짜 및 순서 교정) ---
+# --- 탭 2: 조회부 (순서 교정 및 색상 적용) ---
 with tab2:
     st.header("🔍 전체 상담 내역 조회")
     if st.button("🔄 최신 데이터 불러오기"):
@@ -95,39 +104,42 @@ with tab2:
             df = pd.DataFrame(res.data)
             
             if not df.empty:
-                # 1. 일자 수정 (시간 제거)
+                # 1. 일자 수정
                 df['created_at'] = pd.to_datetime(df['created_at']).dt.date
                 
-                # 2. 숫자 변환 및 합계용 데이터 준비
+                # 2. 숫자 변환
                 for c in ['price_suggested', 'price_confirmed', 'price_paid']:
                     df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0).astype(int)
                 
                 total_sum = df['price_paid'].sum()
 
-                # 3. [핵심] zhepheto님이 요청하신 순서로 데이터 재배치
-                # 시간, 지점, 환자명, 구분, 내원경로, 상담자, 상담결과, 상담금액, 확정금액, 수납금액, 상담내용, 상담항목
+                # 3. 순서 재배치 (상담항목을 상담자 뒤로 이동)
+                # 일자, 지점, 환자명, 구분, 내원경로, 상담자, 상담항목, 상담결과, 상담금액, 확정금액, 수납금액, 상담내용
                 df_reordered = df[[
                     'created_at', 'branch', 'patient_name', 'patient_type', 
-                    'inflow', 'staff_name', 'result', 
+                    'inflow', 'staff_name', 'treatment', 'result', 
                     'price_suggested', 'price_confirmed', 'price_paid', 
-                    'content', 'treatment'
+                    'content'
                 ]]
 
                 # 4. 한글 컬럼명 적용
                 df_reordered.columns = [
                     '일자', '지점', '환자명', '구분', 
-                    '내원경로', '상담자', '상담결과', 
+                    '내원경로', '상담자', '상담항목', '상담결과', 
                     '상담금액', '확정금액', '수납금액', 
-                    '상담내용', '상담항목'
+                    '상담내용'
                 ]
 
-                # 5. 금액 컬럼을 미리 '글자'로 변환 (에러 박멸)
+                # 5. 금액 포맷팅 (에러 방지를 위해 문자열로 변환)
                 display_df = df_reordered.copy()
                 for col in ['상담금액', '확정금액', '수납금액']:
                     display_df[col] = display_df[col].apply(lambda x: f"{x:,}원")
                 
-                # 6. 표 출력
-                st.table(display_df)
+                # 6. 스타일 적용 (확정: 노랑, 미확정: 빨강)
+                styled_df = display_df.style.apply(row_style, axis=1)
+                
+                # 7. 최종 출력
+                st.dataframe(styled_df, use_container_width=True)
                 
                 st.divider()
                 st.metric("총 수납 금액 합계", f"{total_sum:,}원")
