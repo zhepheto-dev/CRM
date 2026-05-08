@@ -3,12 +3,15 @@ import datetime
 import re
 from supabase import create_client, Client
 
-# 🔐 Supabase 설정 (주소와 키를 다시 한번 확인해서 넣어주세요)
-SUPABASE_URL = "https://xptuxxzwvwjxpzeelsjf.supabase.co"
-SUPABASE_KEY = "sb_publishable_ZAcVzMbVwwl1A-YNZIJucA_D6gTqcd8"
+# 🔐 Supabase 설정 (주소와 키 앞뒤에 .strip()을 붙여 공백을 강제로 제거합니다)
+SUPABASE_URL = "https://xptuxxzwvwjxpzeelsjf.supabase.co".strip()
+SUPABASE_KEY = "sb_publishable_ZAcVzMbVwwl1A-YNZIJucA_D6gTqcd8".strip()
 
 @st.cache_resource
 def get_supabase():
+    # 주소가 정확한지 다시 한번 강제로 확인
+    if not SUPABASE_URL.startswith("https://"):
+        st.error("URL 주소 형식이 잘못되었습니다. https:// 로 시작해야 합니다.")
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
 try:
