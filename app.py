@@ -22,7 +22,7 @@ if branch != "지점을 선택하세요":
         inflow = st.selectbox("유입 경로", ["온라인", "환자소개", "오프라인", "외부영업", "기타"])
         staff_name = st.selectbox("상담사", ["우선혜", "전누", "임예린"]) # 나중에 관리자 기능에서 수정 가능하게 변경
         
-           with col2:
+   with col2:
         st.subheader("상담 결과 및 금액")
         result = st.selectbox("상담 결과", ["성공", "실패", "부재", "상담없음"])
         
