@@ -48,7 +48,7 @@ with tab1:
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("👤 환자 및 상담 정보")
-            patient_name = st.text_input("환자명")
+            patient_name = st.text_input("환자명", key="p_name")
             patient_type = st.radio("구분", ["신환", "구환"], horizontal=True)
             consult_item = st.selectbox("상담항목", ["항목을 선택하세요", "임플란트", "교정", "미백/라미네이트", "충치/보철", "턱관절/이갈이", "기타"])
             inflow = st.selectbox("경로", ["온라인", "소개", "워크인", "기타"])
@@ -62,26 +62,30 @@ with tab1:
                 clean = re.sub(r'[^0-9]', '', str(val))
                 return int(clean) if clean else 0
 
-            s_raw = st.text_input("상담금액", value="0")
-            c_raw = st.text_input("확정금액", value="0")
-            p_raw = st.text_input("수납금액", value="0")
+            s_raw = st.text_input("상담금액", value="0", key="s_val")
+            c_raw = st.text_input("확정금액", value="0", key="c_val")
+            p_raw = st.text_input("수납금액", value="0", key="p_val")
             s_val, c_val, p_val = get_num(s_raw), get_num(c_raw), get_num(p_raw)
 
             if s_val > 0 or c_val > 0 or p_val > 0:
                 st.info("📊 **금액 상세 요약**")
                 st.write(f"* 상담금액: {s_val:,}원 ({number_to_korean(s_val)} 원)")
                 st.write(f"* 확정금액: {c_val:,}원 ({number_to_korean(c_val)} 원)")
-                st.markdown(f'<div style="font-size: 1.15em; color: #FF4B4B; font-weight: bold;">* 수납금액: {p_val:,}원 ({number_to_korean(p_val)} 원)</div>', unsafe_allow_html=True)
+                # 에러 포인트 수정: f-string 내의 콤마 포맷팅 단순화
+                st.markdown(f'<div style="color: #FF4B4B; font-weight: bold;">* 수납금액: {p_val:,}원 ({number_to_korean(p_val)} 원)</div>', unsafe_allow_html=True)
 
         content = st.text_area("📝 상담 상세 내용")
         if st.button("💾 상담 내역 저장하기"):
             if not patient_name or consult_item == "항목을 선택하세요":
                 st.error("⚠️ 환자명과 상담항목을 확인해주세요.")
             else:
-                data = {"branch": branch, "patient_name": patient_name, "patient_type": patient_type, "treatment": consult_item, "inflow": inflow, "staff_name": staff_name, "result": result_status, "next_reservation": next_reservation, "price_suggested": s_val, "price_confirmed": c_val, "price_paid": p_val, "content": content}
-                supabase.table("counseling_logs").insert(data).execute()
-                st.success("✅ 저장 완료!")
-                st.balloons()
+                try:
+                    data = {"branch": branch, "patient_name": patient_name, "patient_type": patient_type, "treatment": consult_item, "inflow": inflow, "staff_name": staff_name, "result": result_status, "next_reservation": next_reservation, "price_suggested": s_val, "price_confirmed": c_val, "price_paid": p_val, "content": content}
+                    supabase.table("counseling_logs").insert(data).execute()
+                    st.success("✅ 저장 완료!")
+                    st.balloons()
+                except Exception as e:
+                    st.error(f"저장 중 오류 발생: {e}")
 
 # --- 탭 2: 데이터 조회 (에러 해결 핵심 지점) ---
 with tab2:
@@ -90,21 +94,28 @@ with tab2:
         try:
             res = supabase.table("counseling_logs").select("*").order("created_at", desc=True).execute()
             df = pd.DataFrame(res.data)
+            
             if not df.empty:
-                # 🚀 [핵심] 숫자 컬럼 강제 변환 (에러 방지)
-                for col in ['price_suggested', 'price_confirmed', 'price_paid']:
+                # 🚀 [에러 해결] 모든 금액 컬럼을 불러오자마자 숫자로 고정
+                price_cols = ['price_suggested', 'price_confirmed', 'price_paid']
+                for col in price_cols:
                     if col in df.columns:
                         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
                 
-                # 컬럼 한글화
+                # 컬럼 한글화 (순서 조심)
                 df.columns = ['ID', '시간', '지점', '환자명', '구분', '상담항목', '경로', '상담자', '결과', '상담금액', '확정금액', '수납금액', '내용', '예약여부']
                 
-                # 콤마 표시 스타일 적용
-                st.dataframe(df.style.format({'상담금액': '{:,}', '확정금액': '{:,}', '수납금액': '{:,}'}), use_container_width=True)
+                # 🚀 [핵심 수정] 에러가 났던 .style.format() 대신, 출력용 데이터프레임을 따로 생성
+                display_df = df.copy()
+                for col in ['상담금액', '확정금액', '수납금액']:
+                    display_df[col] = display_df[col].apply(lambda x: f"{x:,}원")
+                
+                st.dataframe(display_df, use_container_width=True)
                 
                 st.divider()
                 st.metric("총 수납 금액", f"{df['수납금액'].sum():,}원")
             else:
                 st.warning("데이터가 없습니다.")
         except Exception as e:
-            st.error(f"오류 발생: {str(e)}")
+            # 에러 원인을 더 정확히 파악하기 위한 상세 메시지
+            st.error(f"오류 상세: {str(e)}")
