@@ -40,12 +40,12 @@ if branch != "지점을 선택하세요":
         st.subheader("기본 정보")
         patient_name = st.text_input("환자명", placeholder="이름을 입력하세요")
         patient_type = st.radio("환자 구분", ["신환", "구환"], horizontal=True)
-        inflow = st.selectbox("유입 경로", ["온라인", "소개환자", "외부영업", "워크-인", "기타"])
-        staff_name = st.selectbox("상담자", ["우선혜", "전누리", "임예린"])
+        inflow = st.selectbox("유입 경로", ["네이버 GFA", "네이버 SA", "네이버 카페", "지인소개", "기타"])
+        staff_name = st.selectbox("상담사", ["김실장", "이실장", "박실장"])
         
     with col2:
         st.subheader("상담 결과 및 금액")
-        result = st.selectbox("상담 결과", ["확정", "미확정", "보류", "상담없음"])
+        result = st.selectbox("상담 결과", ["성공", "실패", "부재", "상담없음"])
         
         # 입력창 안에서 실시간으로 콤마가 작동하도록 placeholder에 000을 넣었습니다.
         val_suggested = st.text_input("상담 금액 (제시액)", key="sug", placeholder="000,000")
