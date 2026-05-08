@@ -2,7 +2,7 @@ import streamlit as st
 from supabase import create_client, Client
 import re
 
-# 🔐 [표준 설정] 수파베이스 고유 정보 (xptuxxz 확인 완료)
+# 🔐 [표준 설정] 수파베이스 정보
 SUPABASE_URL = "https://xptuxxzsvwjxpzeelsjf.supabase.co"
 SUPABASE_KEY = "sb_publishable_ZAcVzMbVwwl1A-YNZIJucA_D6gTqcd8"
 
@@ -38,21 +38,31 @@ if branch != "지점을 선택하세요":
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("👤 환자 정보")
+        st.subheader("👤 환자 및 상담 정보")
         patient_name = st.text_input("환자명", value="")
         patient_type = st.radio("구분", ["신환", "구환"], horizontal=True)
+        
+        # 🚀 [명칭 변경] 상담항목 선택
+        consult_item = st.selectbox("상담항목", [
+            "항목을 선택하세요", "임플란트", "교정", "미백/라미네이트", "충치/보철", "턱관절/이갈이", "기타(직접입력)"
+        ])
+        if consult_item == "기타(직접입력)":
+            consult_item = st.text_input("상세 상담항목 입력")
+
         inflow = st.selectbox("경로", ["온라인", "소개", "워크인", "기타"])
         staff_name = st.selectbox("상담자", ["우선혜", "전누리", "임예린"])
         
     with col2:
-        st.subheader("💰 금액 정보")
+        st.subheader("💰 금액 및 예약 정보")
         result_status = st.selectbox("상담결과", ["확정", "미확정", "보류", "상담없음"])
+        
+        # 🚀 [명칭 유지] 다음 예약 여부
+        next_reservation = st.radio("다음 예약 여부", ["예약 완료", "미예약", "추후 연락"], horizontal=True)
         
         def get_num(val):
             clean = re.sub(r'[^0-9]', '', str(val))
             return int(clean) if clean else 0
 
-        # 기본값 비우기 설정
         sug_raw = st.text_input("상담금액", value="", placeholder="숫자만 입력")
         conf_raw = st.text_input("확정금액", value="", placeholder="숫자만 입력")
         paid_raw = st.text_input("수납금액", value="", placeholder="숫자만 입력")
@@ -63,7 +73,7 @@ if branch != "지점을 선택하세요":
             st.info("📊 **금액 상세 요약**")
             st.write(f"* 상담금액: {sug_val:,}원 ({number_to_korean(sug_val)} 원)")
             st.write(f"* 확정금액: {conf_val:,}원 ({number_to_korean(conf_val)} 원)")
-            # 🚀 [에러 수정 포인트] unsafe_url=True를 unsafe_allow_html=True로 변경
+            # 수납금액 빨간색 강조
             st.markdown(f"""
                 <div style="font-size: 1.15em; color: #FF4B4B; font-weight: bold; margin-top: 5px;">
                     * 수납금액: {paid_val:,}원 ({number_to_korean(paid_val)} 원)
@@ -73,26 +83,28 @@ if branch != "지점을 선택하세요":
     content = st.text_area("📝 상담 상세 내용", height=150)
     
     if st.button("💾 상담 내역 금고에 저장하기"):
-        if not patient_name:
-            st.error("⚠️ 환자명을 입력해 주세요.")
-        elif supabase is None:
-            st.error("❌ 서버 연결 실패!")
+        if not patient_name or consult_item == "항목을 선택하세요":
+            st.error("⚠️ 환자명과 상담항목을 모두 확인해 주세요.")
         else:
             try:
+                # DB 컬럼명은 시스템 연동을 위해 기존 약속된 명칭(treatment 등)을 사용하거나 
+                # 수파베이스 설정에 맞춰 수정하세요.
                 data = {
                     "branch": str(branch),
                     "patient_name": str(patient_name),
                     "patient_type": str(patient_type),
+                    "treatment": str(consult_item), # 화면엔 상담항목, DB엔 treatment로 저장
                     "inflow": str(inflow),
                     "staff_name": str(staff_name),
                     "result": str(result_status),
+                    "next_reservation": str(next_reservation),
                     "price_suggested": int(sug_val),
                     "price_confirmed": int(conf_val),
                     "price_paid": int(paid_val),
                     "content": str(content)
                 }
                 supabase.table("counseling_logs").insert(data).execute()
-                st.success(f"✅ {patient_name} 님 저장 완료!")
+                st.success(f"✅ {patient_name} 님 저장 완료! 조심히 퇴근하세요!")
                 st.balloons()
             except Exception as e:
                 st.error(f"❌ 저장 실패: {str(e)}")
