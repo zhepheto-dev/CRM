@@ -4,8 +4,8 @@ import re
 from supabase import create_client, Client
 
 # 🔐 Supabase 설정 (주소 오타 수정 완료)
-SUPABASE_URL = "https://xptuxzsvwjxpzeelsjf.supabase.co".strip()
-SUPABASE_KEY = "sb_publishable_ZAcVzMbVwwL1A-YNZIJucA_D6gTqcd8".strip()
+SUPABASE_URL = "https://xptuxxzsvwjxpzeelsjf.supabase.co".strip()
+SUPABASE_KEY = "sb_publishable_ZAcVzMbVwwl1A-YNZIJucA_D6gTqcd8".strip()
 
 @st.cache_resource
 def get_supabase():
