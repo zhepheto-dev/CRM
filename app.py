@@ -3,7 +3,7 @@ from supabase import create_client, Client
 import re
 import pandas as pd
 
-# 🔐 [표준 설정] 수파베이스 정보 (image_44b8a1.png 근거)
+# 🔐 [표준 설정] 수파베이스 정보
 SUPABASE_URL = "https://xptuxxzsvwjxpzeelsjf.supabase.co"
 SUPABASE_KEY = "sb_publishable_ZAcVzMbVwwl1A-YNZIJucA_D6gTqcd8"
 
@@ -79,15 +79,16 @@ with tab1:
                 st.info("📊 **금액 상세 요약**")
                 st.write(f"* 상담금액: {sug_val:,}원 ({number_to_korean(sug_val)} 원)")
                 st.write(f"* 확정금액: {conf_val:,}원 ({number_to_korean(conf_val)} 원)")
+                # 수납금액 강조
                 st.markdown(f"""
                     <div style="font-size: 1.15em; color: #FF4B4B; font-weight: bold; margin-top: 5px;">
                         * 수납금액: {paid_val:,}원 ({number_to_korean(paid_val)} 원)
                     </div>
                     """, unsafe_allow_html=True)
 
-        content = st.text_area("📝 상담 상세 내용", height=150)
+        content = st.text_area("📝 상담 상세 내용 및 특이사항", height=150)
         
-        # 🚀 [요청 반영] 버튼 명칭 변경
+        # 버튼 명칭 변경 확인
         if st.button("💾 상담 내역 저장하기"):
             if not patient_name or consult_item == "항목을 선택하세요":
                 st.error("⚠️ 환자명과 상담항목을 모두 확인해 주세요.")
@@ -105,9 +106,10 @@ with tab1:
                     st.success(f"✅ {patient_name} 님 저장 완료!")
                     st.balloons()
                 except Exception as e:
+                    # [Errno -2] 에러 등에 대비한 메시지
                     st.error(f"❌ 저장 실패: {str(e)}")
 
-# --- TAB 2: 데이터 조회 (에러 수정 지점) ---
+# --- TAB 2: 데이터 조회 (에러 해결 핵심 구간) ---
 with tab2:
     st.header("🔍 전체 상담 내역 조회")
     
@@ -118,9 +120,10 @@ with tab2:
                 df = pd.DataFrame(response.data)
                 
                 if not df.empty:
-                    # 🚀 에러 방지: 금액 컬럼을 강제로 숫자형으로 변환
-                    price_cols = ['price_suggested', 'price_confirmed', 'price_paid']
-                    for col in price_cols:
+                    # 🚀 [에러 해결 1] 모든 컬럼에 대해 글자가 섞여있으면 강제로 숫자로 변환
+                    # 특히 금액 관련 컬럼들을 확실하게 숫자(int)로 바꿉니다.
+                    num_cols = ['price_suggested', 'price_confirmed', 'price_paid']
+                    for col in num_cols:
                         if col in df.columns:
                             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
 
@@ -131,12 +134,8 @@ with tab2:
                         '상담금액', '확정금액', '수납금액', '내용', '다음예약여부'
                     ]
                     
-                    # 🚀 에러 수정 포인트: 포맷 방식을 단순화하여 충돌 방지
-                    st.dataframe(df.style.format({
-                        '상담금액': '{:,}', 
-                        '확정금액': '{:,}', 
-                        '수납금액': '{:,}'
-                    }), use_container_width=True)
+                    # 🚀 [에러 해결 2] 콤마(,) 표시 방식을 가장 안전한 스타일로 변경
+                    st.dataframe(df.style.format(subset=['상담금액', '확정금액', '수납금액'], formatter="{:,}"), use_container_width=True)
                     
                     st.divider()
                     st.subheader("📈 실시간 요약 통계")
