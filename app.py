@@ -3,7 +3,7 @@ from supabase import create_client, Client
 import re
 import pandas as pd
 
-# 🔐 수파베이스 설정
+# 🔐 수파베이스 설정 (유지)
 SUPABASE_URL = "https://xptuxxzsvwjxpzeelsjf.supabase.co"
 SUPABASE_KEY = "sb_publishable_ZAcVzMbVwwl1A-YNZIJucA_D6gTqcd8"
 
@@ -36,20 +36,22 @@ def number_to_korean(num):
         result.append(f"{천:,}천")
     return " ".join(result)
 
-# 🎨 행 색상 지정 함수
-def row_style(row):
+# 🎨 폰트 색상 지정 함수 (배경 대신 글자색 변경)
+def font_style(row):
     color = ""
     if row['상담결과'] == '확정':
-        color = 'background-color: #FFF9C4; color: black;' # 연한 노란색
+        color = 'color: #E6B400;' # 가독성을 높인 진한 노란색(금색 계열)
     elif row['상담결과'] == '미확정':
-        color = 'background-color: #FFCDD2; color: black;' # 연한 빨간색
+        color = 'color: #D32F2F;' # 진한 빨간색
+    else:
+        color = 'color: white;' # 기본 색상 (다크모드 기준)
     return [color] * len(row)
 
 st.title("🏥 상담 내역 관리 및 조회 시스템")
 
 tab1, tab2 = st.tabs(["📝 상담 내역 입력", "📊 저장 데이터 조회"])
 
-# --- 탭 1: 입력부 ---
+# --- 탭 1: 입력부 (기존 로직 유지) ---
 with tab1:
     branch = st.sidebar.selectbox("지점 선택", ["지점을 선택하세요", "강남점", "서초점"])
     if branch != "지점을 선택하세요":
@@ -95,7 +97,7 @@ with tab1:
                 except Exception as e:
                     st.error(f"저장 실패: {e}")
 
-# --- 탭 2: 조회부 (순서 교정 및 색상 적용) ---
+# --- 탭 2: 조회부 (폰트 색상 및 순서 적용) ---
 with tab2:
     st.header("🔍 전체 상담 내역 조회")
     if st.button("🔄 최신 데이터 불러오기"):
@@ -113,8 +115,7 @@ with tab2:
                 
                 total_sum = df['price_paid'].sum()
 
-                # 3. 순서 재배치 (상담항목을 상담자 뒤로 이동)
-                # 일자, 지점, 환자명, 구분, 내원경로, 상담자, 상담항목, 상담결과, 상담금액, 확정금액, 수납금액, 상담내용
+                # 3. 순서 재배치 (상담항목을 상담자 뒤로 배치)
                 df_reordered = df[[
                     'created_at', 'branch', 'patient_name', 'patient_type', 
                     'inflow', 'staff_name', 'treatment', 'result', 
@@ -130,13 +131,14 @@ with tab2:
                     '상담내용'
                 ]
 
-                # 5. 금액 포맷팅 (에러 방지를 위해 문자열로 변환)
+                # 5. 금액 포맷팅 (문자열 변환으로 에러 방지)
                 display_df = df_reordered.copy()
                 for col in ['상담금액', '확정금액', '수납금액']:
                     display_df[col] = display_df[col].apply(lambda x: f"{x:,}원")
                 
-                # 6. 스타일 적용 (확정: 노랑, 미확정: 빨강)
-                styled_df = display_df.style.apply(row_style, axis=1)
+                # 6. 스타일 적용 (글자색만 변경)
+                # axis=1을 사용하여 행별로 상담결과를 체크하고 폰트 색상을 입힙니다.
+                styled_df = display_df.style.apply(font_style, axis=1)
                 
                 # 7. 최종 출력
                 st.dataframe(styled_df, use_container_width=True)
