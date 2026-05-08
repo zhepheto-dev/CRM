@@ -3,7 +3,7 @@ import datetime
 import re
 from supabase import create_client, Client
 
-# 🔐 Supabase 설정 (사진 정보와 완벽 일치)
+# 🔐 Supabase 설정 (사진 정보와 완벽 일치 확인)
 SUPABASE_URL = "https://xptuxzsvwjxpzeelsjf.supabase.co".strip()
 SUPABASE_KEY = "sb_publishable_ZAcVzMbVwwl1A-YNZIJucA_D6gTqcd8".strip()
 
@@ -66,7 +66,7 @@ if branch != "지점을 선택하세요":
         conf_val = get_num(conf_raw)
         paid_val = get_num(paid_raw)
 
-        # 🚀 [복구 완료] 세 금액 중 하나라도 있으면 모든 금액 상세 표기
+        # 🚀 모든 금액 상세 표기 로직 (제시액, 확정액, 수납액 모두 표시)
         if sug_val > 0 or conf_val > 0 or paid_val > 0:
             st.markdown("---")
             st.write(f"📊 **제시액:** {sug_val:,}원 ({number_to_korean(sug_val)} 원)")
