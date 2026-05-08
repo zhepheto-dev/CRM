@@ -97,4 +97,54 @@ with tab1:
                 except Exception as e:
                     st.error(f"저장 실패: {e}")
 
-# ---
+# --- 탭 2: 조회부 ---
+with tab2:
+    st.header("🔍 전체 상담 내역 조회")
+    if st.button("🔄 최신 데이터 불러오기"):
+        try:
+            res = supabase.table("counseling_logs").select("*").order("created_at", desc=True).execute()
+            df = pd.DataFrame(res.data)
+            
+            if not df.empty:
+                # 1. 데이터 형식 변환
+                df['created_at'] = pd.to_datetime(df['created_at']).dt.date
+                for col in ['price_suggested', 'price_confirmed', 'price_paid']:
+                    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+                
+                # 2. 합계 계산
+                s_sum, c_sum, p_sum = df['price_suggested'].sum(), df['price_confirmed'].sum(), df['price_paid'].sum()
+
+                # 3. [순서] 구분 다음 상담항목 배치
+                df_ordered = df[[
+                    'created_at', 'branch', 'patient_name', 'patient_type', 'treatment',
+                    'inflow', 'staff_name', 'result', 'price_suggested', 'price_confirmed',
+                    'price_paid', 'content'
+                ]]
+
+                # 4. 한글 컬럼명 설정
+                df_ordered.columns = [
+                    '일자', '지점', '환자명', '구분', '상담항목',
+                    '내원경로', '상담자', '상담결과', '상담금액', '확정금액',
+                    '수납금액', '상담내용'
+                ]
+
+                # 5. 금액 콤마 표시 (에러 방지를 위해 최종 출력용 복사본 생성)
+                final_display = df_ordered.copy()
+                for c in ['상담금액', '확정금액', '수납금액']:
+                    final_display[c] = final_display[c].apply(lambda x: f"{int(x):,}원")
+                
+                # 6. 스타일 적용 (확정: 노랑, 미확정: 빨강만!)
+                styled_df = final_display.style.apply(font_style, axis=1)
+                st.dataframe(styled_df, use_container_width=True)
+                
+                st.divider()
+                
+                # 7. [순서] 합계: 상담 -> 확정 -> 수납
+                m1, m2, m3 = st.columns(3)
+                m1.metric("총 상담 금액 합계", f"{s_sum:,}원")
+                m2.metric("총 확정 금액 합계", f"{c_sum:,}원")
+                m3.metric("총 수납 금액 합계", f"{p_sum:,}원")
+            else:
+                st.warning("데이터가 없습니다.")
+        except Exception as e:
+            st.error(f"조회 중 오류 발생: {str(e)}")
