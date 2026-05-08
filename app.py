@@ -1,9 +1,9 @@
 import streamlit as st
 from supabase import create_client, Client
 import re
-import pandas as pd # 데이터 조회를 위한 라이브러리 추가
+import pandas as pd
 
-# 🔐 [표준 설정] 수파베이스 정보
+# 🔐 [표준 설정] 수파베이스 정보 (image_44b8a1.png 근거)
 SUPABASE_URL = "https://xptuxxzsvwjxpzeelsjf.supabase.co"
 SUPABASE_KEY = "sb_publishable_ZAcVzMbVwwl1A-YNZIJucA_D6gTqcd8"
 
@@ -36,10 +36,8 @@ def number_to_korean(num):
         result.append(f"{천:,}천")
     return " ".join(result)
 
-# 메인 타이틀
 st.title("🏥 상담 내역 관리 및 조회 시스템")
 
-# 탭 구성 (입력과 조회를 분리하여 가독성 확보)
 tab1, tab2 = st.tabs(["📝 상담 내역 입력", "📊 저장 데이터 조회"])
 
 # --- TAB 1: 데이터 입력 ---
@@ -96,18 +94,12 @@ with tab1:
             else:
                 try:
                     data = {
-                        "branch": str(branch),
-                        "patient_name": str(patient_name),
-                        "patient_type": str(patient_type),
-                        "treatment": str(consult_item),
-                        "inflow": str(inflow),
-                        "staff_name": str(staff_name),
-                        "result": str(result_status),
-                        "next_reservation": str(next_reservation),
-                        "price_suggested": int(sug_val),
-                        "price_confirmed": int(conf_val),
-                        "price_paid": int(paid_val),
-                        "content": str(content)
+                        "branch": str(branch), "patient_name": str(patient_name),
+                        "patient_type": str(patient_type), "treatment": str(consult_item),
+                        "inflow": str(inflow), "staff_name": str(staff_name),
+                        "result": str(result_status), "next_reservation": str(next_reservation),
+                        "price_suggested": int(sug_val), "price_confirmed": int(conf_val),
+                        "price_paid": int(paid_val), "content": str(content)
                     }
                     supabase.table("counseling_logs").insert(data).execute()
                     st.success(f"✅ {patient_name} 님 저장 완료!")
@@ -115,33 +107,37 @@ with tab1:
                 except Exception as e:
                     st.error(f"❌ 저장 실패: {str(e)}")
 
-# --- TAB 2: 데이터 조회 ---
+# --- TAB 2: 데이터 조회 (에러 수정 지점) ---
 with tab2:
     st.header("🔍 전체 상담 내역 조회")
     
     if st.button("🔄 최신 데이터 불러오기"):
         if supabase:
             try:
-                # 수파베이스에서 모든 데이터 가져오기
                 response = supabase.table("counseling_logs").select("*").order("created_at", desc=True).execute()
                 df = pd.DataFrame(response.data)
                 
                 if not df.empty:
-                    # 컬럼명 한글 변환 (보기 편하게)
+                    # 🚀 에러 방지: 금액 컬럼을 강제로 숫자형으로 변환
+                    price_cols = ['price_suggested', 'price_confirmed', 'price_paid']
+                    for col in price_cols:
+                        if col in df.columns:
+                            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+
+                    # 컬럼명 한글 변환
                     df.columns = [
                         'ID', '생성시간', '지점', '환자명', '구분', 
                         '상담항목', '유입경로', '상담자', '상담결과', 
                         '상담금액', '확정금액', '수납금액', '내용', '다음예약여부'
                     ]
                     
-                    # 수치 데이터 포맷팅
+                    # 🚀 에러 수정 포인트: 포맷 방식을 단순화하여 충돌 방지
                     st.dataframe(df.style.format({
-                        '상담금액': '{:,}원',
-                        '확정금액': '{:,}원',
-                        '수납금액': '{:,}원'
+                        '상담금액': '{:,}', 
+                        '확정금액': '{:,}', 
+                        '수납금액': '{:,}'
                     }), use_container_width=True)
                     
-                    # 간단한 마케팅 요약 통계
                     st.divider()
                     st.subheader("📈 실시간 요약 통계")
                     total_paid = df['수납금액'].sum()
