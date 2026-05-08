@@ -36,15 +36,15 @@ def number_to_korean(num):
         result.append(f"{천:,}천")
     return " ".join(result)
 
-# 🎨 폰트 색상 지정 함수 (배경 대신 글자색 변경)
+# 🎨 폰트 색상 지정 함수 (글자색 변경)
 def font_style(row):
     color = ""
     if row['상담결과'] == '확정':
-        color = 'color: #E6B400;' # 가독성을 높인 진한 노란색(금색 계열)
+        color = 'color: #E6B400;' # 진한 금색
     elif row['상담결과'] == '미확정':
         color = 'color: #D32F2F;' # 진한 빨간색
     else:
-        color = 'color: white;' # 기본 색상 (다크모드 기준)
+        color = 'color: white;'
     return [color] * len(row)
 
 st.title("🏥 상담 내역 관리 및 조회 시스템")
@@ -97,7 +97,7 @@ with tab1:
                 except Exception as e:
                     st.error(f"저장 실패: {e}")
 
-# --- 탭 2: 조회부 (폰트 색상 및 순서 적용) ---
+# --- 탭 2: 조회부 (순서 및 합산 항목 수정) ---
 with tab2:
     st.header("🔍 전체 상담 내역 조회")
     if st.button("🔄 최신 데이터 불러오기"):
@@ -109,43 +109,8 @@ with tab2:
                 # 1. 일자 수정
                 df['created_at'] = pd.to_datetime(df['created_at']).dt.date
                 
-                # 2. 숫자 변환
+                # 2. 숫자 변환 및 합계 계산
                 for c in ['price_suggested', 'price_confirmed', 'price_paid']:
                     df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0).astype(int)
                 
-                total_sum = df['price_paid'].sum()
-
-                # 3. 순서 재배치 (상담항목을 상담자 뒤로 배치)
-                df_reordered = df[[
-                    'created_at', 'branch', 'patient_name', 'patient_type', 
-                    'inflow', 'staff_name', 'treatment', 'result', 
-                    'price_suggested', 'price_confirmed', 'price_paid', 
-                    'content'
-                ]]
-
-                # 4. 한글 컬럼명 적용
-                df_reordered.columns = [
-                    '일자', '지점', '환자명', '구분', 
-                    '내원경로', '상담자', '상담항목', '상담결과', 
-                    '상담금액', '확정금액', '수납금액', 
-                    '상담내용'
-                ]
-
-                # 5. 금액 포맷팅 (문자열 변환으로 에러 방지)
-                display_df = df_reordered.copy()
-                for col in ['상담금액', '확정금액', '수납금액']:
-                    display_df[col] = display_df[col].apply(lambda x: f"{x:,}원")
-                
-                # 6. 스타일 적용 (글자색만 변경)
-                # axis=1을 사용하여 행별로 상담결과를 체크하고 폰트 색상을 입힙니다.
-                styled_df = display_df.style.apply(font_style, axis=1)
-                
-                # 7. 최종 출력
-                st.dataframe(styled_df, use_container_width=True)
-                
-                st.divider()
-                st.metric("총 수납 금액 합계", f"{total_sum:,}원")
-            else:
-                st.warning("데이터가 없습니다.")
-        except Exception as e:
-            st.error(f"조회 중 오류 발생: {str(e)}")
+                sum_suggested = df['price_
