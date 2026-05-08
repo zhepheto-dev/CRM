@@ -3,7 +3,7 @@ from supabase import create_client, Client
 import re
 import pandas as pd
 
-# 🔐 수파베이스 설정 (유지)
+# 🔐 수파베이스 설정
 SUPABASE_URL = "https://xptuxxzsvwjxpzeelsjf.supabase.co"
 SUPABASE_KEY = "sb_publishable_ZAcVzMbVwwl1A-YNZIJucA_D6gTqcd8"
 
@@ -36,25 +36,20 @@ def number_to_korean(num):
         result.append(f"{천:,}천")
     return " ".join(result)
 
-# 🎨 폰트 색상 지정 함수 (요청 사항 엄격 적용)
+# 🎨 폰트 색상 지정 함수 (확정: 노랑, 미확정: 빨강만 적용)
 def font_style(row):
-    color = ""
-    # 1. 확정은 노란색(금색)
+    color = "color: inherit;"
     if row['상담결과'] == '확정':
         color = 'color: #E6B400;' 
-    # 2. 미확정만 빨간색
     elif row['상담결과'] == '미확정':
         color = 'color: #D32F2F;' 
-    # 3. 보류를 포함한 나머지는 색상 미적용 (기본값)
-    else:
-        color = 'color: inherit;' 
     return [color] * len(row)
 
 st.title("🏥 상담 내역 관리 및 조회 시스템")
 
 tab1, tab2 = st.tabs(["📝 상담 내역 입력", "📊 저장 데이터 조회"])
 
-# --- 탭 1: 입력부 (기존 로직 유지) ---
+# --- 탭 1: 입력부 ---
 with tab1:
     branch = st.sidebar.selectbox("지점 선택", ["지점을 선택하세요", "강남점", "서초점"])
     if branch != "지점을 선택하세요":
@@ -62,7 +57,7 @@ with tab1:
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("👤 환자 및 상담 정보")
-            patient_name = st.text_input("환자명", key="p_input")
+            patient_name = st.text_input("환자명")
             patient_type = st.radio("구분", ["신환", "구환"], horizontal=True)
             consult_item = st.selectbox("상담항목", ["항목을 선택하세요", "임플란트", "교정", "미백/라미네이트", "충치/보철", "턱관절/이갈이", "기타"])
             inflow = st.selectbox("경로", ["온라인", "소개", "워크인", "기타"])
@@ -76,9 +71,9 @@ with tab1:
                 clean = re.sub(r'[^0-9]', '', str(val))
                 return int(clean) if clean else 0
 
-            s_raw = st.text_input("상담금액", value="0", key="s_raw")
-            c_raw = st.text_input("확정금액", value="0", key="c_raw")
-            p_raw = st.text_input("수납금액", value="0", key="p_raw")
+            s_raw = st.text_input("상담금액", value="0")
+            c_raw = st.text_input("확정금액", value="0")
+            p_raw = st.text_input("수납금액", value="0")
             s_val, c_val, p_val = get_num(s_raw), get_num(c_raw), get_num(p_raw)
 
             if s_val > 0 or c_val > 0 or p_val > 0:
@@ -100,7 +95,7 @@ with tab1:
                 except Exception as e:
                     st.error(f"저장 실패: {e}")
 
-# --- 탭 2: 조회부 (필터링 및 순서 유지) ---
+# --- 탭 2: 조회부 ---
 with tab2:
     st.header("🔍 전체 상담 내역 조회")
     if st.button("🔄 최신 데이터 불러오기"):
@@ -109,26 +104,12 @@ with tab2:
             df = pd.DataFrame(res.data)
             
             if not df.empty:
-                # 1. 일자 수정
+                # 1. 전처리
                 df['created_at'] = pd.to_datetime(df['created_at']).dt.date
-                
-                # 2. 숫자 변환 및 합계
                 for c in ['price_suggested', 'price_confirmed', 'price_paid']:
                     df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0).astype(int)
                 
-                sum_s, sum_c, sum_p = df['price_suggested'].sum(), df['price_confirmed'].sum(), df['price_paid'].sum()
+                # 2. 합계 계산
+                s_sum, c_sum, p_sum = df['price_suggested'].sum(), df['price_confirmed'].sum(), df['price_paid'].sum()
 
-                # 3. 순서 재배치 (상담항목은 '구분' 다음)
-                df_ordered = df[[
-                    'created_at', 'branch', 'patient_name', 'patient_type', 'treatment',
-                    'inflow', 'staff_name', 'result', 
-                    'price_suggested', 'price_confirmed', 'price_paid', 
-                    'content'
-                ]]
-
-                # 4. 한글 컬럼명
-                df_ordered.columns = [
-                    '일자', '지점', '환자명', '구분', '상담항목',
-                    '내원경로', '상담자', '상담결과', 
-                    '상담금액', '확정금액', '수납금액', 
-                    '상담내용'
+                # 3. 순서 재배치 (상담
