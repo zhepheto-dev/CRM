@@ -4,10 +4,10 @@ import datetime
 # 페이지 설정
 st.set_page_config(page_title="Clinic Admin System", layout="wide")
 
-st.title("🏥 더뉴치과의원 관리 시스템")
+st.title("🏥 지점별 상담 및 성과 관리 시스템")
 
 # 1. 지점 선택 (A안 반영)
-branch = st.sidebar.selectbox("지점 선택", ["지점을 선택하세요", "본점", "분점"])
+branch = st.sidebar.selectbox("지점 선택", ["지점을 선택하세요", "강남점", "서초점"])
 
 if branch != "지점을 선택하세요":
     st.header(f"📍 {branch} 상담 입력")
@@ -19,12 +19,12 @@ if branch != "지점을 선택하세요":
         st.subheader("기본 정보")
         patient_name = st.text_input("환자명")
         patient_type = st.radio("환자 구분", ["신환", "구환"], horizontal=True)
-        inflow = st.selectbox("유입 경로", ["온라인", "환자소개", "오프라인", "외부영업", "기타"])
-        staff_name = st.selectbox("상담사", ["우선혜", "전누", "임예린"]) # 나중에 관리자 기능에서 수정 가능하게 변경
+        inflow = st.selectbox("유입 경로", ["온라인", "소개환자", "외부영업", "워크-인", "기타"])
+        staff_name = st.selectbox("상담자", ["우선혜", "전누리", "임예린"])
         
-   with col2:
+    with col2:
         st.subheader("상담 결과 및 금액")
-        result = st.selectbox("상담 결과", ["성공", "실패", "부재", "상담없음"])
+        result = st.selectbox("상담 결과", ["확정", "미확정", "보류", "상담없음"])
         
         # 콤마 표기를 위해 format="%d"와 help 기능을 추가했습니다.
         price_suggested = st.number_input("상담 금액 (제시액)", min_value=0, step=10000, value=0)
