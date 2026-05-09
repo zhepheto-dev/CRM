@@ -16,7 +16,7 @@ def get_supabase():
 
 supabase = get_supabase()
 
-st.set_page_config(page_title="Clinic CRM", layout="wide")
+st.set_page_config(page_title="THENEWDENT", layout="wide")
 
 # 🎨 [긴급교정] 보류는 절대 빨간색이 될 수 없는 무결점 스타일 함수
 def apply_final_style(row):
@@ -37,7 +37,7 @@ def apply_final_style(row):
         
     return styles
 
-st.title("🏥 상담 내역 관리 및 조회 시스템")
+st.title("🏥 더뉴치과 통합관리 프로그램")
 
 tab1, tab2 = st.tabs(["📝 상담 내역 입력", "📊 저장 데이터 조회"])
 
